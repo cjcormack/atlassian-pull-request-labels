@@ -1,0 +1,178 @@
+#!/bin/bash
+#
+# Signs a packaged plugin jar so Bitbucket's app signature check accepts it.
+#
+#   buildutils/sign --init      generate the signing key and certificate
+#   buildutils/sign [jar]       sign a jar, defaulting to the one in target/
+#
+# The signature goes to stdout as a single line, so it can be piped straight
+# to the clipboard, and is also written next to the jar as a .pem file. Paste
+# it into the Signature field of the Upload app dialog.
+#
+# The private key is the secret worth protecting: anyone holding it can build
+# an app this Bitbucket will trust. Keep the original in 1Password. It is
+# gitignored here.
+#
+# The certificate is public. Commit it, and install it in the truststore at
+# <bitbucket-home>/upmconfig/truststore/ so the instance trusts what we sign.
+#
+set -euo pipefail
+
+signing_dir="${SIGNING_DIR:-signing}"
+config="$signing_dir/app-signing.cfg"
+key="${SIGNING_KEY:-$signing_dir/app-signing.key}"
+cert="${SIGNING_CERT:-$signing_dir/app-signing.crt}"
+cert_days="${SIGNING_CERT_DAYS:-700}"
+expiry_warning_days=60
+
+log() { echo ":: $*" >&2; }
+die() { echo "!! $*" >&2; exit 1; }
+
+# Temporary files are tracked globally so the trap can still see them once a
+# function has returned. Bash 3.2 ships with macOS, so no arrays here.
+tmp_csr=""
+tmp_signature=""
+tmp_pubkey=""
+
+cleanup() {
+    [[ -n "$tmp_csr" ]] && rm -f "$tmp_csr"
+    [[ -n "$tmp_signature" ]] && rm -f "$tmp_signature"
+    [[ -n "$tmp_pubkey" ]] && rm -f "$tmp_pubkey"
+    return 0
+}
+
+trap cleanup EXIT
+
+require_openssl() {
+    command -v openssl >/dev/null || die "openssl not found on PATH"
+
+    openssl genpkey -algorithm ed25519 -out /dev/null 2>/dev/null \
+        || die "this openssl cannot generate ed25519 keys, which Bitbucket requires"
+}
+
+init() {
+    require_openssl
+
+    [[ -f "$config" ]] || die "missing $config"
+
+    if [[ -e "$key" ]]; then
+        die "$key already exists. Refusing to overwrite it, because a new key
+   invalidates every signature made with the old one and every instance
+   trusting the old certificate. Delete it deliberately if that is what
+   you want."
+    fi
+
+    mkdir -p "$signing_dir"
+
+    log "generating ed25519 signing key"
+    ( umask 077 && openssl genpkey -algorithm ed25519 -out "$key" )
+    chmod 600 "$key"
+
+    log "generating self-signed certificate, valid for $cert_days days"
+    tmp_csr="$(mktemp)"
+
+    openssl req -new -out "$tmp_csr" -key "$key" -config "$config" 2>/dev/null
+    openssl x509 -req -days "$cert_days" -in "$tmp_csr" -signkey "$key" \
+        -out "$cert" -extensions v3_ca -extfile "$config" 2>/dev/null
+
+    log "created $key and $cert"
+    log ""
+    log "next, in this order:"
+    log "  1. store $key in 1Password, then keep or delete the local copy"
+    log "  2. commit $cert"
+    log "  3. install $cert into <bitbucket-home>/upmconfig/truststore/"
+    log "     owned by a user other than the one running Bitbucket, and not"
+    log "     writable by it, or the safety check rejects the whole truststore"
+    log "  4. run: buildutils/sign"
+}
+
+find_jar() {
+    local found count
+    found="$(find target -maxdepth 1 -type f -name '*.jar' 2>/dev/null | sort)"
+    count="$(printf '%s' "$found" | grep -c . || true)"
+
+    case "$count" in
+        0) die "no jar in target/. Run 'atlas-mvn clean package' first." ;;
+        1) printf '%s\n' "$found" ;;
+        *) die "several jars in target/. Name the one you want:
+   $(printf '%s' "$found" | tr '\n' ' ')" ;;
+    esac
+}
+
+check_certificate() {
+    openssl x509 -in "$cert" -checkend 0 -noout >/dev/null 2>&1 \
+        || die "$cert has expired. Generate a new one and reinstall it in the
+   truststore, otherwise every install will fail the signature check."
+
+    if ! openssl x509 -in "$cert" -checkend $((expiry_warning_days * 86400)) -noout >/dev/null 2>&1; then
+        log "WARNING: $cert expires within $expiry_warning_days days"
+        log "         ($(openssl x509 -in "$cert" -enddate -noout | cut -d= -f2))"
+    fi
+}
+
+sign() {
+    local jar="$1"
+
+    require_openssl
+
+    [[ -f "$jar" ]] || die "no such file: $jar"
+    [[ -f "$key" ]] || die "missing $key. Restore it from 1Password, or run
+   'buildutils/sign --init' to create a new one."
+    [[ -f "$cert" ]] || die "missing $cert. Restore it from the repository, or
+   run 'buildutils/sign --init' to create a new one."
+
+    check_certificate
+
+    local base signature
+    base="${jar%.jar}"
+    tmp_signature="$(mktemp)"
+    tmp_pubkey="$(mktemp)"
+
+    log "signing $jar"
+    openssl pkeyutl -sign -inkey "$key" -rawin -in "$jar" -out "$tmp_signature"
+
+    # Verify against the certificate rather than the key, so a mismatched pair
+    # fails here instead of silently on the Bitbucket instance.
+    openssl x509 -in "$cert" -pubkey -noout > "$tmp_pubkey"
+    openssl pkeyutl -verify -pubin -inkey "$tmp_pubkey" -rawin -in "$jar" \
+        -sigfile "$tmp_signature" >/dev/null 2>&1 \
+        || die "the signature does not verify against $cert. The key and the
+   certificate are not a pair."
+
+    # One line, so it survives a copy and paste into the Signature field of the
+    # Upload app dialog. The verifier strips whitespace anyway.
+    signature="$(openssl base64 -A -in "$tmp_signature")"
+
+    printf '%s\n' "$signature" > "$base.pem"
+
+    log "wrote $base.pem"
+    log ""
+    log "in Manage apps, choose Upload app, pick the jar as the plugin file,"
+    log "and paste the line below into the Signature field. The certificate"
+    log "does not go in the form; it has to be in the instance's truststore."
+    log ""
+
+    # The signature alone goes to stdout, so it can be piped: sign | pbcopy
+    printf '%s\n' "$signature"
+}
+
+main() {
+    case "${1:-}" in
+        --init)
+            init
+            ;;
+        -h|--help)
+            awk 'NR == 1 && /^#!/ { next }
+                 /^#/ { sub(/^# ?/, ""); print; next }
+                 { exit }' "$0"
+            ;;
+        "")
+            sign "$(find_jar)"
+            ;;
+        *)
+            sign "$1"
+            ;;
+    esac
+}
+
+main "$@"

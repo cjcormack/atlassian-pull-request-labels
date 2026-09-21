@@ -22,14 +22,29 @@ var ViewPullRequestListWithFilter = function(context, api) {
 
   this._avatarSize = new AvatarSize("medium");
 
+  // Bitbucket >= 10 mounts the list asynchronously, so its state is not
+  // necessarily there the moment our own request for labels comes back.
   this._render = function(labels) {
-    this._react = new React(this._$);
+    WaitFor(
+      function() {
+        var react = new React(this._$);
+        if (react.state() != null) {
+          return react;
+        }
 
-    // Bitbucket <= 5.0
-    if (this._react.state() == null) {
-      this._react = new React(this._$.find(".pull-requests-table"));
-    }
+        // Bitbucket <= 5.0
+        react = new React(this._$.find(".pull-requests-table"));
 
+        return react.state() != null ? react : null;
+      }.bind(this),
+      function(react) {
+        this._react = react;
+        this._decorate(labels);
+      }.bind(this)
+    );
+  };
+
+  this._decorate = function(labels) {
     this._filter = new PullRequestFilter(
       this._react,
       new SelectLabelFilter(labels)

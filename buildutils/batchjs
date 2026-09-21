@@ -1,4 +1,4 @@
-#!/bin/python
+#!/opt/homebrew/bin/python3
 
 sources = "./src/main/resources/js"
 prepend = "(function ($) {\n"

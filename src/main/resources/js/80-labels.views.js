@@ -227,7 +227,7 @@ var ViewPullRequestDetails = function(context, api) {
     var root = $(".aui-page-panel-inner");
 
     var observer = new Observer(
-      "#pull-requests-container, .summary-panel",
+      "*", // Not sure why '#pull-requests-container, .summary-panel' doesn't work here
       function(target) {
         this._$ = $(summaryPanelSelector);
         this._mount();

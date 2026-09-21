@@ -37,25 +37,21 @@ import com.atlassian.bitbucket.pull.PullRequestService;
 import com.atlassian.bitbucket.pull.PullRequestState;
 import com.atlassian.bitbucket.repository.Repository;
 import com.atlassian.bitbucket.repository.RepositoryService;
-import com.atlassian.bitbucket.rest.pull.RestPullRequest;
-import com.atlassian.bitbucket.rest.pull.RestPullRequestParticipant;
-import com.atlassian.bitbucket.rest.util.RestPage;
+import com.atlassian.bitbucket.rest.v2.api.pull.RestPullRequest;
+import com.atlassian.bitbucket.rest.v2.api.pull.RestPullRequestParticipant;
 import com.atlassian.bitbucket.util.Page;
 import com.atlassian.bitbucket.util.PageImpl;
 import com.atlassian.bitbucket.util.PageRequest;
 import com.atlassian.bitbucket.util.PageRequestImpl;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
-import com.atlassian.upm.api.license.PluginLicenseManager;
 
 import io.reconquest.bitbucket.labels.Label;
-import io.reconquest.bitbucket.labels.LicenseValidator;
 import io.reconquest.bitbucket.labels.dao.LabelDao;
 import io.reconquest.bitbucket.labels.rest.response.PullRequestLabelResponse;
 import io.reconquest.bitbucket.labels.rest.response.PullRequestLabelsListResponse;
 import io.reconquest.bitbucket.labels.rest.response.PullRequestLabelsMapResponse;
 import io.reconquest.bitbucket.labels.rest.response.PullRequestLabelsSaveResponse;
 import io.reconquest.bitbucket.labels.rest.response.PullRequestLabelsTreeResponse;
-import io.reconquest.bitbucket.labels.service.LabelsService;
 
 @Path("/")
 public class PullRequestLabels {
@@ -66,18 +62,15 @@ public class PullRequestLabels {
   private final AuthenticationContext authContext;
 
   private final LabelDao dao;
-  private final LicenseValidator licenseValidator;
 
   @Inject
   public PullRequestLabels(
       @ComponentImport ActiveObjects ao,
-      @ComponentImport PluginLicenseManager pluginLicenseManager,
       @ComponentImport RepositoryService repositoryService,
       @ComponentImport PullRequestService pullRequestService,
       @ComponentImport ProjectService projectService,
       @ComponentImport AvatarService avatarService,
       @ComponentImport AuthenticationContext authContext) {
-    this.licenseValidator = new LicenseValidator(LabelsService.PLUGIN_KEY, pluginLicenseManager);
 
     this.repositoryService = checkNotNull(repositoryService);
     this.pullRequestService = checkNotNull(pullRequestService);
@@ -95,9 +88,6 @@ public class PullRequestLabels {
       @PathParam("project_id") Integer projectId,
       @PathParam("repository_id") Integer repositoryId,
       @PathParam("pull_request_id") Long pullRequestId) {
-    if (!licenseValidator.isValid()) {
-      return Response.status(401).build();
-    }
 
     Project project = this.projectService.getById(projectId);
     if (project == null) {
@@ -125,9 +115,6 @@ public class PullRequestLabels {
   public Response listByRepositoryHash(
       @PathParam("project_id") Integer projectId,
       @PathParam("repository_id") Integer repositoryId) {
-    if (!licenseValidator.isValid()) {
-      return Response.status(401).build();
-    }
 
     Project project = this.projectService.getById(projectId);
     if (project == null) {
@@ -174,9 +161,6 @@ public class PullRequestLabels {
       @QueryParam("is_reviewer") Boolean isReviewer,
       @QueryParam("start") Integer start,
       @QueryParam("limit") Integer limit) {
-    if (!licenseValidator.isValid()) {
-      return Response.status(401).build();
-    }
 
     Project project = this.projectService.getById(projectId);
     if (project == null) {
@@ -302,7 +286,7 @@ public class PullRequestLabels {
           RestPullRequest restPullRequest = new RestPullRequest(pullRequest);
 
           RestPullRequestParticipant pullRequestAuthor =
-              (RestPullRequestParticipant) restPullRequest.get(RestPullRequest.AUTHOR);
+              (RestPullRequestParticipant) restPullRequest.get("author");
 
           pullRequestAuthor
               .getUser()
@@ -333,7 +317,7 @@ public class PullRequestLabels {
     Page<RestPullRequest> filteredPage = new PageImpl<RestPullRequest>(
         new PageRequestImpl(start, limit), filteredPullRequests, isLastPage);
 
-    return Response.ok(new RestPage<RestPullRequest>(filteredPage)).build();
+    return Response.ok(filteredPage).build();
   }
 
   @GET
@@ -342,9 +326,6 @@ public class PullRequestLabels {
   public Response listByRepository(
       @PathParam("project_id") Integer projectId,
       @PathParam("repository_id") Integer repositoryId) {
-    if (!licenseValidator.isValid()) {
-      return Response.status(401).build();
-    }
 
     Project project = this.projectService.getById(projectId);
     if (project == null) {
@@ -366,9 +347,6 @@ public class PullRequestLabels {
   @Produces({MediaType.APPLICATION_JSON})
   @Path("/list")
   public Response list(@FormParam("repository_id") List<Integer> repositories) {
-    if (!licenseValidator.isValid()) {
-      return Response.status(401).build();
-    }
 
     for (int i = 0; i < repositories.toArray().length; i++) {
       Integer id = repositories.get(i);
@@ -395,9 +373,6 @@ public class PullRequestLabels {
       @PathParam("label_id") int labelId,
       @FormParam("name") String name,
       @FormParam("color") String color) {
-    if (!licenseValidator.isValid()) {
-      return Response.status(401).build();
-    }
 
     Project project = this.projectService.getById(projectId);
     if (project == null) {
@@ -429,9 +404,6 @@ public class PullRequestLabels {
       @PathParam("pull_request_id") Long pullRequestId,
       @FormParam("name") String name,
       @FormParam("color") String color) {
-    if (!licenseValidator.isValid()) {
-      return Response.status(401).build();
-    }
 
     Project project = this.projectService.getById(projectId);
     if (project == null) {
@@ -475,9 +447,6 @@ public class PullRequestLabels {
       @PathParam("repository_id") Integer repositoryId,
       @PathParam("pull_request_id") Long pullRequestId,
       @FormParam("name") String name) {
-    if (!licenseValidator.isValid()) {
-      return Response.status(401).build();
-    }
 
     Project project = this.projectService.getById(projectId);
     if (project == null) {

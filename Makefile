@@ -11,3 +11,9 @@ nginx:
 
 batchjs:
 	@./buildutils/batchjs
+
+sign:
+	@./buildutils/sign
+
+sign-init:
+	@./buildutils/sign --init

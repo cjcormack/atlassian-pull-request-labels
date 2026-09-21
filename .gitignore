@@ -11,3 +11,9 @@
 /eclipse
 /license.*
 /.vim
+
+# App signing. The certificate is public and belongs in the repository; the
+# private key belongs in 1Password and must never be committed. Deliberately
+# unanchored, so a key dropped anywhere in the tree is still caught.
+*.key
+*.csr

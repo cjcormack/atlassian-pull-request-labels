@@ -1,6 +1,6 @@
 package io.reconquest.bitbucket.labels.rest.response;
 
-import javax.xml.bind.annotation.*;
+import jakarta.xml.bind.annotation.*;
 import java.util.HashMap;
 import java.util.ArrayList;
 

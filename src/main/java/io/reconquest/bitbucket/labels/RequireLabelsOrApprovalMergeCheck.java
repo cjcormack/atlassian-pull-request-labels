@@ -12,10 +12,10 @@ import com.atlassian.bitbucket.repository.Repository;
 import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import io.reconquest.bitbucket.labels.dao.LabelDao;
 
-import javax.annotation.Nonnull;
-import javax.inject.Inject;
+import jakarta.annotation.Nonnull;
+import jakarta.inject.Inject;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class RequireLabelsOrApprovalMergeCheck implements RepositoryMergeCheck {
     private final LabelDao dao;
@@ -24,7 +24,7 @@ public class RequireLabelsOrApprovalMergeCheck implements RepositoryMergeCheck {
     public RequireLabelsOrApprovalMergeCheck(
             @ComponentImport ActiveObjects ao
     ) {
-        this.dao = new LabelDao(checkNotNull(ao));
+        this.dao = new LabelDao(requireNonNull(ao));
     }
 
     @Nonnull

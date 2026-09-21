@@ -5,7 +5,7 @@ import com.atlassian.bitbucket.setting.Settings;
 import com.atlassian.bitbucket.setting.SettingsValidationErrors;
 import com.atlassian.bitbucket.setting.SettingsValidator;
 
-import javax.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 
 public class Validator implements SettingsValidator {
     @Override

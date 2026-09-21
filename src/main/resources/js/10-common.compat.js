@@ -1,23 +1,19 @@
 var Compat = function () {
-    var react = function () {
-        try {
-            return require('react')
-        } catch(e) {
-            return {version: null};
-        }
-    }
-
-    this.react = {
-        v15: react().version >= "15",
-        v16: react().version >= "16"
-    }
-
     this.helpers = {
-        avatars: AJS.version > "7.6.3"
+        // Feature detect rather than compare versions: the helper is exactly
+        // what AvatarSize_Native calls, so its presence is the real question.
+        avatars: typeof bitbucket !== "undefined"
+            && bitbucket.internal
+            && bitbucket.internal.widget
+            && bitbucket.internal.widget.avatar
+            && bitbucket.internal.widget.avatar.avatar
+            && $.isFunction(bitbucket.internal.widget.avatar.avatar.avatarSizeInPx)
     }
 
     this.icons = {
-        tag: AJS.version >= "7.5.3"
+        // AJS.version carries the AUI version. Treat an unknown version as
+        // current, since every supported Bitbucket ships AUI well past 7.5.3.
+        tag: AJS.version == null || VersionCompare(AJS.version, "7.5.3") >= 0
     }
 
     return this;

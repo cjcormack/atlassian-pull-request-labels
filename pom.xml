@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.reconquest.bitbucket</groupId>
     <artifactId>labels</artifactId>
-    <version>7.1.1</version>
+    <version>8.0.0</version>
     <organization>
         <name>reconquest</name>
     </organization>
@@ -38,9 +38,16 @@
             <artifactId>bitbucket-spi</artifactId>
             <scope>provided</scope>
         </dependency>
+        <!-- RestPullRequest, used to mimic the native pull request list response. -->
         <dependency>
             <groupId>com.atlassian.bitbucket.server</groupId>
-            <artifactId>bitbucket-page-objects</artifactId>
+            <artifactId>bitbucket-rest-v2-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- InitializingBean / DisposableBean on the service launcher. -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -74,44 +81,18 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>jakarta.servlet</groupId>
-            <artifactId>jakarta.servlet-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.atlassian.plugins.rest</groupId>
-            <artifactId>atlassian-rest-common</artifactId>
-            <version>7.2.0</version>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.atlassian.activeobjects</groupId>
             <artifactId>activeobjects-plugin</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>jakarta.inject</groupId>
-            <artifactId>jakarta.inject-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>com.google.collections</groupId>
-          <artifactId>google-collections</artifactId>
-          <version>1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.atlassian.upm</groupId>
-            <artifactId>licensing-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.atlassian.upm</groupId>
-            <artifactId>upm-api</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -204,19 +185,18 @@
                     <mainOutputDirectory/>
                     <outputDirectory/>
                     <projectArtifact/>
-                    <source>8</source>
-                    <target>8</target>
+                    <release>17</release>
                 </configuration>
             </plugin>
         </plugins>
     </build>
     <properties>
-        <bitbucket.version>9.2.0</bitbucket.version>
+        <bitbucket.version>10.2.7</bitbucket.version>
         <bitbucket.data.version>${bitbucket.version}</bitbucket.data.version>
-        <amps.version>9.1.1</amps.version>
+        <amps.version>9.13.2</amps.version>
         <!-- This key is used to keep the consistency between the key in atlassian-plugin.xml and the key to generate bundle. -->
         <atlassian.plugin.key>${project.groupId}.${project.artifactId}</atlassian.plugin.key>
-        <atlassian.spring.scanner.version>5.1.0</atlassian.spring.scanner.version>
+        <atlassian.spring.scanner.version>6.0.2</atlassian.spring.scanner.version>
 <!--        <commons.lang3.version>3.14.0</commons.lang3.version>-->
 <!--        <jakarta.inject.version>1</jakarta.inject.version>-->
 <!--        <jsr311.version>1.1.1</jsr311.version>-->
